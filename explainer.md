@@ -74,6 +74,7 @@ Presented frame 0s (1280x720) at 1000ms for display at 1016ms.
 # Implementation Details
 * When texImage2D() or drawImage() is called during an active VideoFrameRequestCallback, implementations should ensure that the video frame used is the one matching the active callback.
 * Just like window.requestAnimationFrame(), callbacks are one-shot. video.requestAnimationFrame() must be called again for the next frame.
+* For protected content or cases where video frame details should not be surfaced, implementations should be allowed to surface a NotSupportedError. If the animation frame is requested before the protection status is known, an empty callback can be triggered once known.
 
 
 # Open Questions / Notes
@@ -82,3 +83,4 @@ Presented frame 0s (1280x720) at 1000ms for display at 1016ms.
 * Should we also surface playback quality statistics? E.g., time taken to decode, etc.
 * We should hang the VideoFrameMetadata structure off of [WebGLTexture](https://developer.mozilla.org/en-US/docs/Web/API/WebGLTexture), so that for DOM-less WebGL usage where texImage2D is the only compositor we avoid the need for requestAnimationFrame() to get frame metadata.
 * The API as proposed will miss some frames when compositing is done off the main thread if the next video.requestAnimationFrame() call does not happen in time. To rectify this we would need to make callbacks repeating and provide a cancellation mechanism.
+* There's an [AnimationProvider mix-in](https://html.spec.whatwg.org/multipage/imagebitmap-and-animations.html#animation-frames) which is now standardized, but doesn't allow for optional parameters, can we get some and use that?

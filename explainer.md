@@ -71,6 +71,13 @@ partial interface HTMLVideoElement {
     unsigned long requestAnimationFrame(VideoFrameRequestCallback callback);
     void cancelAnimationFrame(unsigned long handle);
 };
+
+partial interface WebGLTexture {
+    // Allows DOM-less WebGL usage where texImage2D() is the only compositor to
+    // avoid the need for requestAnimationFrame() to get video frame metadata.
+    readonly attribute VideoFrameMetadata lastUploadedVideoFrameMetadata;
+}
+
 ```
 
 
@@ -110,5 +117,4 @@ Presented frame 0s (1280x720) at 1000ms for display at 1016ms.
 
 
 # Open Questions / Notes
-* We should also hang the VideoFrameMetadata structure off of [WebGLTexture](https://developer.mozilla.org/en-US/docs/Web/API/WebGLTexture), so that for DOM-less WebGL usage where texImage2D is the only compositor we avoid the need for requestAnimationFrame() to get frame metadata.
 * The API as proposed will miss some frames when compositing happens off the main thread if a subsequent video.requestAnimationFrame() call does not happen in time. To rectify this we would need to make callbacks repeating.

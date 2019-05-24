@@ -77,7 +77,6 @@ partial interface WebGLTexture {
     // avoid the need for requestAnimationFrame() to get video frame metadata.
     readonly attribute VideoFrameMetadata lastUploadedVideoFrameMetadata;
 }
-
 ```
 
 

@@ -12,16 +12,15 @@ Today sites using [WebGL](https://developer.mozilla.org/en-US/docs/Web/API/WebGL
 
 In an era of [Media Source Extensions](https://developer.mozilla.org/en-US/docs/Web/API/Media_Source_Extensions_API) based [adaptive video playback](https://en.wikipedia.org/wiki/Adaptive_bitrate_streaming) (e.g., [YouTube](https://www.youtube.com/), [Netflix](https://www.netflix.com/), etc) and boutique [WebRTC](https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API) streaming solutions (e.g., [Rainway](https://rainway.com/), [Stadia](https://store.google.com/us/magazine/stadia)), the inherent raciness of access operations and the lack of metadata exposed about the frames limits quality and automated analysis. Our proposed API would allow reliable access to metadata about which frame has been presented when for correlation with other page level events (user input, etc).
 
-Additionally, our proposal will enable will enable a host of frame-accurate [web-platform-tests](https://github.com/web-platform-tests/wpt) which can be shared across browsers that were heretofore impossible or otherwise flaky.
+Additionally, our proposal will enable will enable a host of frame-accurate [web-platform-tests](https://github.com/web-platform-tests/wpt) which can be shared across browsers that were heretofore impossible or otherwise flaky. E.g., while the HTMLMediaElement spec defines readyStates in terms of buffering, it does not define when a frame will be present on the screen.
+
+TODO(dalecurtis): Fill in more information about the WebGL and WebRTC use cases.
 
 
 # Proposed API
 
 ```Javascript
 dictionary VideoFrameMetadata {
-    // The presentation timestamp in seconds of the frame presented.
-    required double presentationTimestamp;
-
     // The time at which the user agent submitted the frame for composition.
     required DOMHighResTimeStamp presentationTime;
 
@@ -32,13 +31,45 @@ dictionary VideoFrameMetadata {
     required unsigned long width;
     required unsigned long height;
 
-    // Potentially other useful properties? Some surfaced from WebRTC?
+    // The presentation timestamp in seconds of the frame presented. May not be
+    // known to the compositor or exist in all cases.
+    optional double presentationTimestamp;
+
+    // The elapsed time in seconds from submission of the encoded packet with
+    // the same presentationTimestamp as this frame to the decoder until the
+    // decoded frame was ready for presentation.
+    //
+    // In addition to decoding time, may include processing time. E.g., YUV
+    // conversion and/or staging into GPU backed memory.
+    optional double elapsedProcessingTime;
+
+    // A count of the number of frames submitted for composition. Allows clients
+    // to determine if frames were missed between VideoFrameRequestCallbacks.
+    //
+    // https://wiki.whatwg.org/wiki/Video_Metrics#presentedFrames
+    optional unsigned long presentedFrames;
+
+    // For video frames coming from a local device like a camera, the time at
+    // which the frame was received from the device.
+    optional DOMHighResTimeStamp captureTime;
+
+    // The RTP timestamp associated with this video frame.
+    //
+    // https://w3c.github.io/webrtc-pc/#dom-rtcrtpcontributingsource
+    optional unsigned long rtpTimestamp;
+
+    // Potentially other useful properties?
 };
 
-callback VideoFrameRequestCallback = void(VideoFrameMetadata);
+callback VideoFrameRequestCallback = void(DOMHighResTimeStamp time, VideoFrameMetadata);
 
 partial interface HTMLVideoElement {
-    void requestAnimationFrame(VideoFrameRequestCallback callback);
+    // Extends the AnimationFrameProvider mixin with the addition of an
+    // VideoFrameMetadata parameter on the FrameRequestCallback.
+    //
+    // https://html.spec.whatwg.org/multipage/imagebitmap-and-animations.html#animation-frames
+    unsigned long requestAnimationFrame(VideoFrameRequestCallback callback);
+    void cancelAnimationFrame(unsigned long handle);
 };
 ```
 
@@ -50,7 +81,7 @@ partial interface HTMLVideoElement {
   let canvas = document.createElement('canvas');
   let canvasContext = canvas.getContext('2d');
 
-  let frameInfoCallback = metadata => {
+  let frameInfoCallback = (_, metadata) => {
     console.log(
       `Presented frame ${metadata.presentationTimestamp}s ` +
       `(${metadata.width}x${metadata.height}) at ` +
@@ -72,15 +103,12 @@ Presented frame 0s (1280x720) at 1000ms for display at 1016ms.
 
 
 # Implementation Details
-* When texImage2D() or drawImage() is called during an active VideoFrameRequestCallback, implementations should ensure that the video frame used is the one matching the active callback.
-* Just like window.requestAnimationFrame(), callbacks are one-shot. video.requestAnimationFrame() must be called again for the next frame.
-* For protected content or cases where video frame details should not be surfaced, implementations should be allowed to surface a NotSupportedError. If the animation frame is requested before the protection status is known, an empty callback can be triggered once known.
+* When texImage2D() or drawImage() is called during an active VideoFrameRequestCallback, implementations shall ensure that the video frame used is the one matching the active callback.
+* Just like window.requestAnimationFrame(), callbacks are one-shot. video.requestAnimationFrame() must be called again to get the next frame.
+* Since VideoFrameRequestCallback will only occur on new frames, error states
+* In cases where VideoFrameMetadata can't be surfaced (e.g., [encrypted media](https://w3c.github.io/encrypted-media/#media-element-restrictions)) implementations may never satisfy the requestAnimationFrame.
 
 
 # Open Questions / Notes
-* `requestAnimationFrame` is a bit of a misnomer and the proposed API diverges from [window.requestAnimationFrame()](https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame) -- we should either rename or not diverge too much (e.g., allow multiple video.requestAnimationFrame() calls that are cancellable and identifiable by some integer id).
-* Which properties would be useful to surface from WebRTC?
-* Should we also surface playback quality statistics? E.g., time taken to decode, etc.
-* We should hang the VideoFrameMetadata structure off of [WebGLTexture](https://developer.mozilla.org/en-US/docs/Web/API/WebGLTexture), so that for DOM-less WebGL usage where texImage2D is the only compositor we avoid the need for requestAnimationFrame() to get frame metadata.
-* The API as proposed will miss some frames when compositing is done off the main thread if the next video.requestAnimationFrame() call does not happen in time. To rectify this we would need to make callbacks repeating and provide a cancellation mechanism.
-* There's an [AnimationProvider mix-in](https://html.spec.whatwg.org/multipage/imagebitmap-and-animations.html#animation-frames) which is now standardized, but doesn't allow for optional parameters, can we get some and use that?
+* We should also hang the VideoFrameMetadata structure off of [WebGLTexture](https://developer.mozilla.org/en-US/docs/Web/API/WebGLTexture), so that for DOM-less WebGL usage where texImage2D is the only compositor we avoid the need for requestAnimationFrame() to get frame metadata.
+* The API as proposed will miss some frames when compositing happens off the main thread if a subsequent video.requestAnimationFrame() call does not happen in time. To rectify this we would need to make callbacks repeating.

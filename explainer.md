@@ -72,10 +72,10 @@ partial interface HTMLVideoElement {
     void cancelAnimationFrame(unsigned long handle);
 };
 
-partial interface WebGLTexture {
+partial interface WebGLVideoTexture {
     // Allows DOM-less WebGL usage where texImage2D() is the only compositor to
     // avoid the need for requestAnimationFrame() to get video frame metadata.
-    readonly attribute VideoFrameMetadata lastUploadedVideoFrameMetadata;
+    VideoFrameMetadata VideoElementTargetVideoTexture(GLenum target, HTMLVideoElement video)
 }
 ```
 

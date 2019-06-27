@@ -14,7 +14,9 @@ In an era of [Media Source Extensions](https://developer.mozilla.org/en-US/docs/
 
 Additionally, our proposal will enable will enable a host of frame-accurate [web-platform-tests](https://github.com/web-platform-tests/wpt) which can be shared across browsers that were heretofore impossible or otherwise flaky. E.g., while the HTMLMediaElement spec defines readyStates in terms of buffering, it does not define when a frame will be present on the screen.
 
-TODO(dalecurtis): Fill in more information about the WebGL and WebRTC use cases.
+Specific use case examples:
+* WebGL applications would like to composite at the video rate and not the display rate to save on processing complexity.
+* WebRTC applications would like to synchronize user events such as a key press with the frame that was displayed to the user when the event was triggered.
 
 
 # Proposed API

@@ -12,7 +12,7 @@ Today sites using [WebGL](https://developer.mozilla.org/en-US/docs/Web/API/WebGL
 
 In an era of [Media Source Extensions](https://developer.mozilla.org/en-US/docs/Web/API/Media_Source_Extensions_API) based [adaptive video playback](https://en.wikipedia.org/wiki/Adaptive_bitrate_streaming) (e.g., [YouTube](https://www.youtube.com/), [Netflix](https://www.netflix.com/), etc) and boutique [WebRTC](https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API) streaming solutions (e.g., [Rainway](https://rainway.com/), [Stadia](https://store.google.com/us/magazine/stadia)), the inherent raciness of access operations and the lack of metadata exposed about the frames limits quality and automated analysis. Our proposed API would allow reliable access to metadata about which frame has been presented when for correlation with other page level events (user input, etc).
 
-Additionally, our proposal will enable will enable a host of frame-accurate [web-platform-tests](https://github.com/web-platform-tests/wpt) which can be shared across browsers that were heretofore impossible or otherwise flaky. E.g., while the HTMLMediaElement spec defines readyStates in terms of buffering, it does not define when a frame will be present on the screen.
+Additionally, our proposal will enable will enable a host of frame-accurate [web-platform-tests](https://github.com/web-platform-tests/wpt) which can be shared across browsers that were heretofore impossible or otherwise flaky. E.g., while the [HTMLMediaElement](https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement) spec defines [readyStates](https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/readyState) in terms of buffering, it does not define when a frame will be present on the screen.
 
 Specific use case examples:
 * WebGL applications would like to composite at the video rate and not the display rate to save on processing complexity.
@@ -35,7 +35,7 @@ dictionary VideoFrameMetadata {
 
     // The presentation timestamp in seconds of the frame presented. May not be
     // known to the compositor or exist in all cases.
-    optional double presentationTimestamp;
+    double presentationTimestamp;  // optional
 
     // The elapsed time in seconds from submission of the encoded packet with
     // the same presentationTimestamp as this frame to the decoder until the
@@ -43,22 +43,28 @@ dictionary VideoFrameMetadata {
     //
     // In addition to decoding time, may include processing time. E.g., YUV
     // conversion and/or staging into GPU backed memory.
-    optional double elapsedProcessingTime;
+    double elapsedProcessingTime;  // optional
 
     // A count of the number of frames submitted for composition. Allows clients
     // to determine if frames were missed between VideoFrameRequestCallbacks.
     //
     // https://wiki.whatwg.org/wiki/Video_Metrics#presentedFrames
-    optional unsigned long presentedFrames;
+    unsigned long presentedFrames;  // optional
 
-    // For video frames coming from a local device like a camera, the time at
-    // which the frame was received from the device.
-    optional DOMHighResTimeStamp captureTime;
+    // For video frames coming from either a local or remote source, this is the
+    // time the encoded packet with the same presentationTimestamp as this frame
+    // was received by the platform. E.g., for a local camera, this is the time
+    // at which the frame was captured by the camera. For a remote source, this
+    // would be the time at which the packet was received over the network.
+    //
+    // TODO: For remote sources should this instead be an estimate of the
+    // capture time on the remote endpoint?
+    DOMHighResTimeStamp captureTime;  // optional
 
     // The RTP timestamp associated with this video frame.
     //
     // https://w3c.github.io/webrtc-pc/#dom-rtcrtpcontributingsource
-    optional unsigned long rtpTimestamp;
+    unsigned long rtpTimestamp;  // optional
 
     // Potentially other useful properties?
 };

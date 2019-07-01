@@ -123,5 +123,7 @@ Presented frame 0s (1280x720) at 1000ms for display at 1016ms.
 * In cases where VideoFrameMetadata can't be surfaced (e.g., [encrypted media](https://w3c.github.io/encrypted-media/#media-element-restrictions)) implementations may never satisfy the requestAnimationFrame.
 
 
-# Open Questions / Notes
+# Open Questions / Notes / Links
 * The API as proposed will miss some frames when compositing happens off the main thread if a subsequent video.requestAnimationFrame() call does not happen in time. To rectify this we would need to make callbacks repeating.
+* [Link to GitHub repository.](https://github.com/dalecurtis/video-animation-frame/blob/master/explainer.md)
+* [Chromium Prototype.](https://chromium-review.googlesource.com/c/chromium/src/+/1616283)
